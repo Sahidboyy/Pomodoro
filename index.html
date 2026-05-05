@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focusly — Pomodoro Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --bg4: #222230;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f8;
+    --text2: #9898b8;
+    --text3: #5a5a78;
+    --accent: #7c6ff7;
+    --accent2: #a89df9;
+    --accent-glow: rgba(124,111,247,0.25);
+    --green: #4ecca3;
+    --amber: #f5a623;
+    --red: #f06060;
+    --pink: #e879a0;
+    --r: 12px;
+    --r2: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; } 
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+
+  /* LAYOUT */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.8)} }
+  .nav { display: flex; gap: 4px; }
+  .nav-btn { background: transparent; border: none; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 14px; border-radius: var(--r2); cursor: pointer; transition: all 0.15s; }
+  .nav-btn:hover { color: var(--text); background: var(--bg3); }
+  .nav-btn.active { color: var(--text); background: var(--bg3); }
+  .user-pill { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 24px; padding: 6px 14px 6px 6px; cursor: pointer; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: 'Syne', sans-serif; }
+  .user-name { font-size: 13px; font-weight: 500; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .sidebar { width: 240px; border-right: 1px solid var(--border); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .sidebar-section { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text3); padding: 10px 10px 4px; }
+  .sidebar-btn { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r2); cursor: pointer; color: var(--text2); font-size: 13px; border: none; background: transparent; width: 100%; text-align: left; transition: all 0.15s; }
+  .sidebar-btn:hover { color: var(--text); background: var(--bg3); }
+  .sidebar-btn.active { color: var(--text); background: var(--bg3); }
+  .sidebar-icon { font-size: 15px; width: 20px; text-align: center; }
+  .sidebar-badge { margin-left: auto; background: var(--accent); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+  .content { flex: 1; overflow-y: auto; }
+
+  /* PAGES */
+  .page { display: none; padding: 32px; }
+  .page.active { display: block; }
+
+  /* AUTH PAGE */
+  .auth-wrap { max-width: 400px; margin: 60px auto; }
+  .auth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 40px; }
+  .auth-title { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+  .auth-sub { color: var(--text2); font-size: 14px; margin-bottom: 30px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .field input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r2); padding: 10px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border 0.15s; }
+  .field input:focus { border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: var(--r2); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+  .btn-outline:hover { background: var(--bg3); color: var(--text); }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 7px 14px; font-size: 12px; }
+  .auth-switch { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text2); }
+  .auth-switch a { color: var(--accent2); cursor: pointer; text-decoration: none; }
+  .auth-switch a:hover { text-decoration: underline; }
+  .error-msg { background: rgba(240,96,96,0.1); border: 1px solid rgba(240,96,96,0.3); border-radius: var(--r2); padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; display: none; }
+  .error-msg.show { display: block; }
+
+  /* TIMER PAGE */
+  .timer-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; max-width: 900px; }
+  .timer-center { display: flex; flex-direction: column; align-items: center; }
+  .mode-pills { display: flex; gap: 6px; background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; padding: 4px; margin-bottom: 40px; }
+  .mode-pill { padding: 7px 18px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text2); transition: all 0.2s; border: none; background: transparent; }
+  .mode-pill.active { background: var(--accent); color: white; }
+  .timer-ring { position: relative; width: 280px; height: 280px; margin-bottom: 32px; }
+  .timer-ring svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--bg3); stroke-width: 6; }
+  .ring-fg { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+  .ring-fg.break { stroke: var(--green); }
+  .ring-fg.long { stroke: var(--amber); }
+  .timer-display { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .timer-time { font-family: 'DM Mono', monospace; font-size: 58px; font-weight: 500; letter-spacing: -2px; line-height: 1; }
+  .timer-label { font-size: 12px; color: var(--text2); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  .timer-controls { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .ctrl-btn { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--border2); background: var(--bg2); color: var(--text2); font-size: 18px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .ctrl-btn:hover { background: var(--bg3); color: var(--text); }
+  .ctrl-btn.main { width: 64px; height: 64px; background: var(--accent); border: none; color: white; font-size: 22px; box-shadow: 0 0 20px var(--accent-glow); }
+  .ctrl-btn.main:hover { background: var(--accent2); transform: scale(1.05); }
+  .pomodoro-dots { display: flex; gap: 8px; }
+  .pomo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); transition: all 0.3s; }
+  .pomo-dot.done { background: var(--accent); border-color: var(--accent); }
+  .pomo-dot.current { background: transparent; border-color: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* TASK PANEL */
+  .panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; }
+  .panel-title { font-size: 13px; font-weight: 600; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .task-input-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .task-input-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r2); padding: 9px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
+  .task-input-row input:focus { border-color: var(--accent); }
+  .task-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .task-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3); border-radius: var(--r2); cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+  .task-item:hover { border-color: var(--border2); }
+  .task-item.active-task { border-color: var(--accent); background: rgba(124,111,247,0.08); }
+  .task-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .task-item.done .task-check { background: var(--green); border-color: var(--green); }
+  .task-item.done .task-check::after { content: '✓'; font-size: 10px; color: #0a0a0f; font-weight: 700; }
+  .task-item.done .task-name { text-decoration: line-through; color: var(--text3); }
+  .task-name { font-size: 13px; flex: 1; }
+  .task-pomos { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-left: auto; flex-shrink: 0; }
+  .task-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 2px; opacity: 0; transition: opacity 0.15s; }
+  .task-item:hover .task-del { opacity: 1; }
+
+  /* STATS PAGE */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; }
+  .stat-num { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .stat-lbl { font-size: 12px; color: var(--text2); }
+  .stat-card.accent .stat-num { color: var(--accent2); }
+  .stat-card.green .stat-num { color: var(--green); }
+  .stat-card.amber .stat-num { color: var(--amber); }
+  .stat-card.pink .stat-num { color: var(--pink); }
+  .section-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .heatmap-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 24px; }
+  .heatmap { display: flex; gap: 3px; flex-wrap: wrap; }
+  .hmap-day { width: 14px; height: 14px; border-radius: 3px; background: var(--bg4); }
+  .hmap-day.l1 { background: rgba(124,111,247,0.2); }
+  .hmap-day.l2 { background: rgba(124,111,247,0.45); }
+  .hmap-day.l3 { background: rgba(124,111,247,0.7); }
+  .hmap-day.l4 { background: var(--accent); }
+  .hmap-months { display: flex; gap: 3px; margin-bottom: 6px; font-size: 10px; color: var(--text3); }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-top: 14px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.5s ease; opacity: 0.8; }
+  .bar:hover { opacity: 1; }
+  .bar-day { font-size: 10px; color: var(--text3); }
+  .bar-val { font-size: 10px; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .streak-wrap { display: flex; gap: 10px; align-items: center; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px; margin-bottom: 24px; }
+  .streak-fire { font-size: 36px; }
+  .streak-num { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: var(--amber); line-height: 1; }
+  .streak-info h3 { font-size: 16px; font-weight: 700; }
+  .streak-info p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* LEADERBOARD */
+  .lb-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2); margin-bottom: 8px; transition: all 0.15s; }
+  .lb-row:hover { border-color: var(--border2); transform: translateX(2px); }
+  .lb-rank { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; width: 32px; text-align: center; }
+  .lb-rank.r1 { color: #ffd700; }
+  .lb-rank.r2 { color: #c0c0c0; }
+  .lb-rank.r3 { color: #cd7f32; }
+  .lb-name { flex: 1; font-weight: 500; }
+  .lb-name small { display: block; font-size: 11px; color: var(--text3); font-weight: 400; }
+  .lb-stat { text-align: right; }
+  .lb-stat strong { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+  .lb-stat small { display: block; font-size: 11px; color: var(--text3); }
+  .lb-streak { font-size: 13px; color: var(--amber); }
+  .lb-you { border-color: var(--accent) !important; background: rgba(124,111,247,0.05) !important; }
+  .lb-tab { display: flex; gap: 6px; margin-bottom: 20px; }
+  .lb-tab-btn { padding: 7px 16px; border-radius: 20px; font-size: 13px; border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .lb-tab-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* FRIENDS */
+  .friend-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; transition: all 0.15s; }
+  .friend-card:hover { border-color: var(--border2); }
+  .friend-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .friend-status.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .friend-status.offline { background: var(--text3); }
+  .friend-info { flex: 1; }
+  .friend-info h4 { font-size: 14px; font-weight: 600; }
+  .friend-info p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .friend-stats { text-align: right; }
+  .friend-stats strong { font-family: 'DM Mono', monospace; font-size: 14px; }
+  .friend-stats small { display: block; font-size: 11px; color: var(--text3); }
+  .add-friend-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .add-friend-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r2); padding: 10px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
+  .add-friend-row input:focus { border-color: var(--accent); }
+  .friend-req { background: rgba(124,111,247,0.08); border: 1px solid rgba(124,111,247,0.2); border-radius: var(--r); padding: 14px 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .friend-req-btns { display: flex; gap: 6px; margin-left: auto; }
+
+  /* SETTINGS */
+  .settings-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 16px; }
+  .settings-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 18px; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .setting-info h4 { font-size: 14px; font-weight: 500; }
+  .setting-info p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .num-input { display: flex; align-items: center; gap: 8px; }
+  .num-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .num-btn:hover { background: var(--bg4); }
+  .num-val { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; min-width: 32px; text-align: center; }
+  .toggle { width: 40px; height: 22px; border-radius: 11px; background: var(--bg4); border: 1px solid var(--border2); cursor: pointer; position: relative; transition: all 0.2s; }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: left 0.2s; }
+  .toggle.on::after { left: 20px; }
+
+  /* NOTIFICATIONS */
+  .notif { position: fixed; bottom: 24px; right: 24px; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--r); padding: 14px 18px; font-size: 13px; z-index: 1000; transform: translateX(120%); transition: transform 0.3s ease; max-width: 300px; }
+  .notif.show { transform: translateX(0); }
+  .notif.success { border-color: rgba(78,204,163,0.4); }
+  .notif.error { border-color: rgba(240,96,96,0.4); }
+
+  /* MISC */
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-size: 24px; font-weight: 800; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-accent { background: rgba(124,111,247,0.15); color: var(--accent2); }
+  .badge-green { background: rgba(78,204,163,0.15); color: var(--green); }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .empty-state { text-align: center; padding: 40px; color: var(--text3); font-size: 14px; }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+  .progress-bar-wrap { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
+  .today-banner { background: linear-gradient(135deg, rgba(124,111,247,0.1), rgba(124,111,247,0.03)); border: 1px solid rgba(124,111,247,0.2); border-radius: var(--r); padding: 20px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: between; gap: 20px; }
+  .session-log { max-height: 200px; overflow-y: auto; }
+  .session-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .session-item:last-child { border-bottom: none; }
+  .session-time { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+
+  /* LOGIN PAGE SPECIAL */
+  .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .auth-bg-dots { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+  .auth-bg-dots::before { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(124,111,247,0.08) 0%, transparent 70%); top: 20%; left: 30%; }
+
+  @media (max-width: 900px) {
+    .timer-layout { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .charts-row { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH PAGE -->
+<div id="authPage" class="auth-page">
+  <div class="auth-bg-dots"></div>
+  <div class="auth-wrap" style="width:100%;max-width:440px;padding:20px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div class="logo" style="justify-content:center;font-size:28px;margin-bottom:8px">
+        <div class="logo-dot" style="width:14px;height:14px"></div> Focusly
+      </div>
+      <p style="color:var(--text2);font-size:14px">Track your deep work, challenge friends</p>
+    </div>
+    <div class="auth-card">
+      <div id="loginForm">
+        <h2 class="auth-title">Welcome back</h2>
+        <p class="auth-sub">Sign in to continue your streak</p>
+        <div id="loginErr" class="error-msg">Invalid username or password</div>
+        <div class="field"><label>Username</label><input type="text" id="loginUser" placeholder="your_username" /></div>
+        <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••" /></div>
+        <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+        <div class="auth-switch">Don't have an account? <a onclick="switchAuth('signup')">Sign up free</a></div>
+      </div>
+      <div id="signupForm" style="display:none">
+        <h2 class="auth-title">Create account</h2>
+        <p class="auth-sub">Join thousands tracking deep work</p>
+        <div id="signupErr" class="error-msg"></div>
+        <div class="field"><label>Display Name</label><input type="text" id="signupName" placeholder="Your Name" /></div>
+        <div class="field"><label>Username</label><input type="text" id="signupUser" placeholder="pick_a_username" /></div>
+        <div class="field"><label>Password</label><input type="password" id="signupPass" placeholder="Min 6 characters" /></div>
+        <button class="btn btn-primary btn-full" onclick="doSignup()">Create Account</button>
+        <div class="auth-switch">Already have an account? <a onclick="switchAuth('login')">Sign in</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="app" style="display:none">
+  <div class="topbar">
+    <div class="logo"><div class="logo-dot"></div> Focusly</div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="gotoPage('timer',this)">Timer</button>
+      <button class="nav-btn" onclick="gotoPage('stats',this)">Stats</button>
+      <button class="nav-btn" onclick="gotoPage('leaderboard',this)">Leaderboard</button>
+      <button class="nav-btn" onclick="gotoPage('friends',this)">Friends</button>
+      <button class="nav-btn" onclick="gotoPage('settings',this)">Settings</button>
+    </div>
+    <div class="user-pill" onclick="gotoPage('settings',null)">
+      <div class="avatar" id="topAvatar" style="background:rgba(124,111,247,0.2);color:var(--accent2)"></div>
+      <span class="user-name" id="topName"></span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-section">Session</div>
+      <button class="sidebar-btn active" onclick="gotoPage('timer',null)"><span class="sidebar-icon">⏱</span> Timer</button>
+      <button class="sidebar-btn" onclick="gotoPage('stats',null)"><span class="sidebar-icon">📊</span> Statistics</button>
+      <div class="sidebar-section">Social</div>
+      <button class="sidebar-btn" onclick="gotoPage('leaderboard',null)"><span class="sidebar-icon">🏆</span> Leaderboard</button>
+      <button class="sidebar-btn" onclick="gotoPage('friends',null)"><span class="sidebar-icon">👥</span> Friends <span class="sidebar-badge" id="friendReqBadge" style="display:none">!</span></button>
+      <div class="sidebar-section">More</div>
+      <button class="sidebar-btn" onclick="gotoPage('settings',null)"><span class="sidebar-icon">⚙</span> Settings</button>
+      <button class="sidebar-btn" onclick="doLogout()" style="margin-top:auto"><span class="sidebar-icon">→</span> Sign Out</button>
+    </div>
+
+    <div class="content">
+
+      <!-- TIMER PAGE -->
+      <div class="page active" id="pageTimer">
+        <div class="timer-layout">
+          <div class="timer-center">
+            <div class="mode-pills">
+              <button class="mode-pill active" onclick="setMode('focus',this)">Focus</button>
+              <button class="mode-pill" onclick="setMode('short',this)">Short Break</button>
+              <button class="mode-pill" onclick="setMode('long',this)">Long Break</button>
+            </div>
+            <div class="timer-ring">
+              <svg width="280" height="280" viewBox="0 0 280 280">
+                <circle class="ring-bg" cx="140" cy="140" r="128"/>
+                <circle class="ring-fg" id="ringFg" cx="140" cy="140" r="128" stroke-dasharray="804.25" stroke-dashoffset="0"/>
+              </svg>
+              <div class="timer-display">
+                <div class="timer-time" id="timerDisplay">25:00</div>
+                <div class="timer-label" id="timerLabel">Focus Session</div>
+              </div>
+            </div>
+            <div class="timer-controls">
+              <button class="ctrl-btn" onclick="skipTimer()" title="Skip">⏭</button>
+              <button class="ctrl-btn main" id="playBtn" onclick="toggleTimer()">▶</button>
+              <button class="ctrl-btn" onclick="resetTimer()" title="Reset">↺</button>
+            </div>
+            <div class="pomodoro-dots" id="pomoDots"></div>
+            <div style="margin-top:20px;text-align:center">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">TODAY'S FOCUS TIME</div>
+              <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent2)" id="todayMin">0 min</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="panel">
+              <div class="panel-title">Today's Tasks <button class="btn btn-sm btn-outline" onclick="clearDone()" style="font-size:11px;padding:4px 10px">Clear done</button></div>
+              <div class="task-input-row">
+                <input type="text" id="taskInput" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()" />
+                <button class="btn btn-primary btn-sm" onclick="addTask()">+</button>
+              </div>
+              <div class="task-list" id="taskList"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title">Today's Sessions</div>
+              <div class="session-log" id="sessionLog">
+                <div class="empty-state" style="padding:20px"><div style="font-size:24px;margin-bottom:6px">☕</div>Start your first session!</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS PAGE -->
+      <div class="page" id="pageStats">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Statistics</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:2px">Your focus journey</div>
+          </div>
+          <select id="statsPeriod" onchange="renderStats()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:8px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="all">All time</option>
+          </select>
+        </div>
+        <div id="streakBanner"></div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="charts-row">
+          <div class="panel">
+            <div class="panel-title">Daily Pomodoros</div>
+            <div class="bar-chart" id="barChart"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Activity Heatmap (Last 12 weeks)</div>
+            <div class="heatmap-wrap" style="background:transparent;border:none;padding:0">
+              <div class="hmap-months" id="hmapMonths"></div>
+              <div class="heatmap" id="heatmap"></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:20px" class="panel">
+          <div class="panel-title">Session History</div>
+          <div id="historyList"></div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD PAGE -->
+      <div class="page" id="pageLeaderboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Leaderboard</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:2px">Updated live — compete with everyone</div>
+          </div>
+          <div style="font-size:12px;color:var(--text3)" id="lbLastUpdate"></div>
+        </div>
+        <div class="lb-tab">
+          <button class="lb-tab-btn active" onclick="setLbTab('today',this)">Today</button>
+          <button class="lb-tab-btn" onclick="setLbTab('week',this)">This Week</button>
+          <button class="lb-tab-btn" onclick="setLbTab('alltime',this)">All Time</button>
+          <button class="lb-tab-btn" onclick="setLbTab('friends',this)">Friends Only</button>
+        </div>
+        <div id="leaderboardList"></div>
+      </div>
+
+      <!-- FRIENDS PAGE -->
+      <div class="page" id="pageFriends">
+        <div class="page-header">
+          <div class="page-title">Friends</div>
+        </div>
+        <div id="friendRequests"></div>
+        <div class="add-friend-row">
+          <input type="text" id="friendUsernameInput" placeholder="Add friend by username..." onkeydown="if(event.key==='Enter')sendFriendReq()" />
+          <button class="btn btn-primary" onclick="sendFriendReq()">Send Request</button>
+        </div>
+        <div class="section-title" style="font-size:14px;margin-bottom:12px;color:var(--text2)">YOUR FRIENDS</div>
+        <div id="friendsList"></div>
+      </div>
+
+      <!-- SETTINGS PAGE -->
+      <div class="page" id="pageSettings">
+        <div class="page-header">
+          <div class="page-title">Settings</div>
+        </div>
+        <div class="settings-section">
+          <h3>Timer Durations</h3>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Focus Duration</h4><p>Length of each focus session</p></div>
+            <div class="num-input">
+              <button class="num-btn" onclick="adjSetting('focusDur',-1)">−</button>
+              <div class="num-val" id="focusDurVal">25</div>
+              <button class="num-btn" onclick="adjSetting('focusDur',1)">+</button>
+              <span style="font-size:12px;color:var(--text3);margin-left:4px">min</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Short Break</h4><p>Break between pomodoros</p></div>
+            <div class="num-input">
+              <button class="num-btn" onclick="adjSetting('shortDur',-1)">−</button>
+              <div class="num-val" id="shortDurVal">5</div>
+              <button class="num-btn" onclick="adjSetting('shortDur',1)">+</button>
+              <span style="font-size:12px;color:var(--text3);margin-left:4px">min</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Long Break</h4><p>Break after 4 pomodoros</p></div>
+            <div class="num-input">
+              <button class="num-btn" onclick="adjSetting('longDur',-1)">−</button>
+              <div class="num-val" id="longDurVal">15</div>
+              <button class="num-btn" onclick="adjSetting('longDur',1)">+</button>
+              <span style="font-size:12px;color:var(--text3);margin-left:4px">min</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Pomodoros before long break</h4><p>Sessions before a long break</p></div>
+            <div class="num-input">
+              <button class="num-btn" onclick="adjSetting('pomoCount',-1)">−</button>
+              <div class="num-val" id="pomoCountVal">4</div>
+              <button class="num-btn" onclick="adjSetting('pomoCount',1)">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Preferences</h3>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Sound Notifications</h4><p>Play a sound when timer ends</p></div>
+            <div class="toggle on" id="toggleSound" onclick="togglePref('sound')"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Auto-start Breaks</h4><p>Automatically begin break timer</p></div>
+            <div class="toggle" id="toggleAutoBreak" onclick="togglePref('autoBreak')"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Auto-start Focus</h4><p>Automatically begin next focus session</p></div>
+            <div class="toggle" id="toggleAutoFocus" onclick="togglePref('autoFocus')"></div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Account</h3>
+          <div class="setting-row">
+            <div class="setting-info"><h4 id="settingsUserName"></h4><p id="settingsUsername" style="color:var(--text3)"></p></div>
+            <button class="btn btn-outline btn-sm" onclick="doLogout()">Sign Out</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Daily Goal</h4><p>Target pomodoros per day</p></div>
+            <div class="num-input">
+              <button class="num-btn" onclick="adjSetting('dailyGoal',-1)">−</button>
+              <div class="num-val" id="dailyGoalVal">8</div>
+              <button class="num-btn" onclick="adjSetting('dailyGoal',1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ===================== DATA LAYER =====================
+const STORAGE_KEY = 'focusly_v2';
+let DB = null;
+
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    DB = raw ? JSON.parse(raw) : initDB();
+  } catch(e) { DB = initDB(); }
+}
+
+function saveDB() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); } catch(e){}
+}
+
+function initDB() {
+  return {
+    users: {},
+    sessions: {},
+    tasks: {},
+    friends: {},
+    friendRequests: {},
+    settings: {},
+    streaks: {}
+  };
+}
+
+// ===================== AUTH =====================
+let currentUser = null;
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  if (!u || !p) { err.textContent='Please fill all fields'; err.classList.add('show'); return; }
+  if (!DB.users[u] || DB.users[u].pass !== hashPass(p)) {
+    err.textContent='Invalid username or password'; err.classList.add('show'); return;
+  }
+  err.classList.remove('show');
+  loginUser(u);
+}
+
+function doSignup() {
+  const name = document.getElementById('signupName').value.trim();
+  const u = document.getElementById('signupUser').value.trim().toLowerCase();
+  const p = document.getElementById('signupPass').value;
+  const err = document.getElementById('signupErr');
+  if (!name || !u || !p) { err.textContent='Please fill all fields'; err.classList.add('show'); return; }
+  if (p.length < 6) { err.textContent='Password must be at least 6 characters'; err.classList.add('show'); return; }
+  if (!/^[a-z0-9_]+$/.test(u)) { err.textContent='Username: only letters, numbers, underscores'; err.classList.add('show'); return; }
+  if (DB.users[u]) { err.textContent='Username already taken'; err.classList.add('show'); return; }
+  DB.users[u] = { name, pass: hashPass(p), created: Date.now(), color: randomColor() };
+  DB.sessions[u] = [];
+  DB.tasks[u] = [];
+  DB.friends[u] = [];
+  DB.friendRequests[u] = [];
+  DB.settings[u] = defaultSettings();
+  DB.streaks[u] = { current: 0, longest: 0, lastDate: null };
+  saveDB();
+  err.classList.remove('show');
+  loginUser(u);
+}
+
+function loginUser(u) {
+  currentUser = u;
+  document.getElementById('authPage').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  initApp();
+}
+
+function doLogout() {
+  currentUser = null;
+  resetTimerState();
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('authPage').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+function switchAuth(mode) {
+  document.getElementById('loginForm').style.display = mode==='login'?'block':'none';
+  document.getElementById('signupForm').style.display = mode==='signup'?'block':'none';
+  document.getElementById('loginErr').classList.remove('show');
+  document.getElementById('signupErr').classList.remove('show');
+}
+
+function hashPass(p) { let h=0; for(let i=0;i<p.length;i++){h=((h<<5)-h)+p.charCodeAt(i);h|=0;} return h.toString(36); }
+function randomColor() { const c=['#7c6ff7','#4ecca3','#f5a623','#e879a0','#f06060','#60a0f0']; return c[Math.floor(Math.random()*c.length)]; }
+function defaultSettings() { return { focusDur:25, shortDur:5, longDur:15, pomoCount:4, sound:true, autoBreak:false, autoFocus:false, dailyGoal:8 }; }
+
+// ===================== APP INIT =====================
+function initApp() {
+  const u = DB.users[currentUser];
+  const s = DB.settings[currentUser];
+  document.getElementById('topName').textContent = u.name;
+  document.getElementById('topAvatar').textContent = u.name.charAt(0).toUpperCase();
+  document.getElementById('topAvatar').style.background = u.color + '33';
+  document.getElementById('topAvatar').style.color = u.color;
+  document.getElementById('settingsUserName').textContent = u.name;
+  document.getElementById('settingsUsername').textContent = '@' + currentUser;
+  loadSettings();
+  renderPomoDots();
+  updateTodayMin();
+  renderTaskList();
+  renderSessionLog();
+  gotoPage('timer', null);
+  updateStreak();
+  setInterval(saveDB, 30000);
+  setInterval(renderLeaderboard, 15000);
+}
+
+// ===================== TIMER =====================
+let timerState = { mode:'focus', running:false, remaining:0, total:0, pomosInCycle:0, timerInt:null };
+let audioCtx = null;
+
+function getSettings() { return DB.settings[currentUser] || defaultSettings(); }
+
+function getTotalForMode(m) {
+  const s = getSettings();
+  if(m==='focus') return s.focusDur*60;
+  if(m==='short') return s.shortDur*60;
+  return s.longDur*60;
+}
+
+function setMode(m, btn) {
+  clearInterval(timerState.timerInt);
+  timerState.running = false;
+  timerState.mode = m;
+  timerState.remaining = getTotalForMode(m);
+  timerState.total = timerState.remaining;
+  document.getElementById('playBtn').textContent = '▶';
+  document.querySelectorAll('.mode-pill').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const labels = {focus:'Focus Session',short:'Short Break',long:'Long Break'};
+  document.getElementById('timerLabel').textContent = labels[m];
+  const rf = document.getElementById('ringFg');
+  rf.className = 'ring-fg' + (m==='short'?' break':m==='long'?' long':'');
+  updateTimerDisplay();
+  updateRing(1);
+}
+
+function toggleTimer() {
+  if(timerState.running) pauseTimer(); else startTimer();
+}
+
+function startTimer() {
+  if(timerState.remaining <= 0) resetTimerForMode();
+  timerState.running = true;
+  document.getElementById('playBtn').textContent = '⏸';
+  timerState.timerInt = setInterval(tickTimer, 1000);
+}
+
+function pauseTimer() {
+  timerState.running = false;
+  document.getElementById('playBtn').textContent = '▶';
+  clearInterval(timerState.timerInt);
+}
+
+function resetTimerForMode() {
+  timerState.remaining = getTotalForMode(timerState.mode);
+  timerState.total = timerState.remaining;
+}
+
+function resetTimer() {
+  pauseTimer();
+  resetTimerForMode();
+  updateTimerDisplay();
+  updateRing(1);
+}
+
+function skipTimer() {
+  pauseTimer();
+  timerComplete(true);
+}
+
+function tickTimer() {
+  timerState.remaining--;
+  updateTimerDisplay();
+  updateRing(timerState.remaining / timerState.total);
+  if(timerState.remaining <= 0) {
+    pauseTimer();
+    timerComplete(false);
+  }
+}
+
+function timerComplete(skipped) {
+  const s = getSettings();
+  if(timerState.mode === 'focus' && !skipped) {
+    timerState.pomosInCycle++;
+    recordSession();
+    playSound();
+    showNotif('✓ Pomodoro complete! Take a break.', 'success');
+    if(timerState.pomosInCycle >= s.pomoCount) {
+      timerState.pomosInCycle = 0;
+      setModeByName('long');
+    } else {
+      setModeByName('short');
+    }
+    renderPomoDots();
+    updateTodayMin();
+    renderSessionLog();
+    if(s.autoBreak) startTimer();
+  } else if(timerState.mode !== 'focus' && !skipped) {
+    playSound();
+    showNotif('Break over! Time to focus.', 'success');
+    setModeByName('focus');
+    if(s.autoFocus) startTimer();
+  } else {
+    setModeByName(timerState.mode === 'focus' ? 'short' : 'focus');
+  }
+}
+
+function setModeByName(m) {
+  const pills = document.querySelectorAll('.mode-pill');
+  const idx = {focus:0,short:1,long:2}[m];
+  setMode(m, pills[idx]);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerState.remaining/60);
+  const s = timerState.remaining%60;
+  document.getElementById('timerDisplay').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateRing(ratio) {
+  const circ = 804.25;
+  document.getElementById('ringFg').style.strokeDashoffset = circ*(1-ratio);
+}
+
+function resetTimerState() {
+  clearInterval(timerState.timerInt);
+  timerState = { mode:'focus', running:false, remaining:0, total:0, pomosInCycle:0, timerInt:null };
+}
+
+function renderPomoDots() {
+  const s = getSettings();
+  const dots = document.getElementById('pomoDots');
+  dots.innerHTML = '';
+  for(let i=0;i<s.pomoCount;i++) {
+    const d = document.createElement('div');
+    d.className = 'pomo-dot' + (i<timerState.pomosInCycle?' done':i===timerState.pomosInCycle&&timerState.mode==='focus'?' current':'');
+    dots.appendChild(d);
+  }
+}
+
+function recordSession() {
+  const today = todayStr();
+  const taskName = getActiveTaskName();
+  DB.sessions[currentUser].push({ date: today, ts: Date.now(), dur: getSettings().focusDur, task: taskName });
+  incrementTaskPomo();
+  updateStreak();
+  saveDB();
+}
+
+function getActiveTaskName() {
+  const tasks = DB.tasks[currentUser] || [];
+  const active = tasks.find(t=>t.active && !t.done);
+  return active ? active.name : '';
+}
+
+function incrementTaskPomo() {
+  const tasks = DB.tasks[currentUser] || [];
+  const active = tasks.find(t=>t.active && !t.done);
+  if(active) { active.pomos = (active.pomos||0)+1; saveDB(); renderTaskList(); }
+}
+
+function updateTodayMin() {
+  const today = todayStr();
+  const sessions = DB.sessions[currentUser] || [];
+  const todaySessions = sessions.filter(s=>s.date===today);
+  const total = todaySessions.reduce((a,s)=>a+s.dur,0);
+  document.getElementById('todayMin').textContent = total >= 60 ? `${Math.floor(total/60)}h ${total%60}m` : `${total} min`;
+}
+
+function renderSessionLog() {
+  const today = todayStr();
+  const sessions = (DB.sessions[currentUser]||[]).filter(s=>s.date===today).slice().reverse();
+  const el = document.getElementById('sessionLog');
+  if(!sessions.length) { el.innerHTML='<div class="empty-state" style="padding:20px"><div style="font-size:24px;margin-bottom:6px">☕</div>Start your first session!</div>'; return; }
+  el.innerHTML = sessions.map(s=>`
+    <div class="session-item">
+      <div>
+        <span style="font-size:13px">${s.task||'Focus Session'}</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:8px">${s.dur}min</span>
+      </div>
+      <span class="session-time">${new Date(s.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+    </div>`).join('');
+}
+
+function playSound() {
+  if(!getSettings().sound) return;
+  try {
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(1100, audioCtx.currentTime+0.1);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.5);
+    osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime+0.5);
+  } catch(e){}
+}
+
+// ===================== TASKS =====================
+function addTask() {
+  const inp = document.getElementById('taskInput');
+  const name = inp.value.trim();
+  if(!name) return;
+  const tasks = DB.tasks[currentUser];
+  tasks.forEach(t=>t.active=false);
+  tasks.push({ id: Date.now(), name, done:false, active:true, pomos:0, date:todayStr() });
+  inp.value = '';
+  saveDB(); renderTaskList();
+}
+
+function toggleTask(id) {
+  const tasks = DB.tasks[currentUser];
+  const t = tasks.find(t=>t.id===id);
+  if(!t) return;
+  tasks.forEach(t=>t.active=false);
+  if(!t.done) t.active = true;
+  renderTaskList();
+}
+
+function doneTask(id) {
+  const t = DB.tasks[currentUser].find(t=>t.id===id);
+  if(t) { t.done=!t.done; t.active=false; }
+  saveDB(); renderTaskList();
+}
+
+function deleteTask(id) {
+  DB.tasks[currentUser] = DB.tasks[currentUser].filter(t=>t.id!==id);
+  saveDB(); renderTaskList();
+}
+
+function clearDone() {
+  DB.tasks[currentUser] = DB.tasks[currentUser].filter(t=>!t.done);
+  saveDB(); renderTaskList();
+}
+
+function renderTaskList() {
+  const today = todayStr();
+  const tasks = (DB.tasks[currentUser]||[]).filter(t=>t.date===today||!t.done);
+  const el = document.getElementById('taskList');
+  if(!tasks.length) { el.innerHTML='<div class="empty-state" style="padding:14px"><div style="font-size:20px;margin-bottom:4px">📝</div>Add a task to focus on</div>'; return; }
+  el.innerHTML = tasks.map(t=>`
+    <div class="task-item${t.done?' done':t.active?' active-task':''}" onclick="toggleTask(${t.id})">
+      <div class="task-check" onclick="event.stopPropagation();doneTask(${t.id})"></div>
+      <span class="task-name">${escHtml(t.name)}</span>
+      <span class="task-pomos">${t.pomos||0} 🍅</span>
+      <button class="task-del" onclick="event.stopPropagation();deleteTask(${t.id})">✕</button>
+    </div>`).join('');
+}
+
+// ===================== STREAK =====================
+function updateStreak() {
+  const streak = DB.streaks[currentUser];
+  const today = todayStr();
+  const sessions = DB.sessions[currentUser]||[];
+  const hasToday = sessions.some(s=>s.date===today);
+  if(!hasToday) return;
+  if(streak.lastDate === today) return;
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yesterdayStr = yesterday.toISOString().slice(0,10);
+  if(streak.lastDate === yesterdayStr) {
+    streak.current++;
+  } else if(streak.lastDate !== today) {
+    streak.current = 1;
+  }
+  streak.lastDate = today;
+  streak.longest = Math.max(streak.longest, streak.current);
+  saveDB();
+}
+
+// ===================== STATS =====================
+function renderStats() {
+  const period = document.getElementById('statsPeriod').value;
+  const sessions = DB.sessions[currentUser]||[];
+  const today = todayStr();
+  let filtered = sessions;
+  if(period==='7') { const d7=new Date(); d7.setDate(d7.getDate()-7); const s7=d7.toISOString().slice(0,10); filtered=sessions.filter(s=>s.date>=s7); }
+  else if(period==='30') { const d30=new Date(); d30.setDate(d30.getDate()-30); const s30=d30.toISOString().slice(0,10); filtered=sessions.filter(s=>s.date>=s30); }
+
+  const totalPomos = filtered.length;
+  const totalMin = filtered.reduce((a,s)=>a+s.dur,0);
+  const todayPomos = sessions.filter(s=>s.date===today).length;
+  const streak = DB.streaks[currentUser] || {current:0,longest:0};
+  const goal = getSettings().dailyGoal;
+
+  // Streak banner
+  document.getElementById('streakBanner').innerHTML = `
+    <div class="streak-wrap" style="margin-bottom:24px">
+      <div class="streak-fire">🔥</div>
+      <div>
+        <div class="streak-num">${streak.current}</div>
+      </div>
+      <div class="streak-info" style="margin-left:8px">
+        <h3>Day Streak</h3>
+        <p>Longest: ${streak.longest} days &nbsp;·&nbsp; Complete 1 pomodoro per day to maintain</p>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">TODAY'S GOAL</div>
+        <div style="font-size:18px;font-weight:700">${todayPomos} / ${goal}</div>
+        <div class="progress-bar-wrap" style="width:120px;margin-top:6px"><div class="progress-bar" style="width:${Math.min(100,(todayPomos/goal)*100)}%"></div></div>
+      </div>
+    </div>`;
+
+  // Stat cards
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card accent"><div class="stat-num">${totalPomos}</div><div class="stat-lbl">Total Pomodoros</div></div>
+    <div class="stat-card green"><div class="stat-num">${totalMin>=60?Math.floor(totalMin/60)+'h '+totalMin%60+'m':totalMin+'m'}</div><div class="stat-lbl">Focus Time</div></div>
+    <div class="stat-card amber"><div class="stat-num">${streak.current}</div><div class="stat-lbl">Current Streak</div></div>
+    <div class="stat-card pink"><div class="stat-num">${streak.longest}</div><div class="stat-lbl">Longest Streak</div></div>`;
+
+  // Bar chart (last 7 days)
+  const barDays = 7;
+  const barData = [];
+  for(let i=barDays-1;i>=0;i--) {
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const cnt=sessions.filter(s=>s.date===ds).length;
+    barData.push({day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()],cnt});
+  }
+  const maxBar = Math.max(...barData.map(d=>d.cnt),1);
+  document.getElementById('barChart').innerHTML = barData.map(d=>`
+    <div class="bar-wrap">
+      <div class="bar-val">${d.cnt||''}</div>
+      <div class="bar" style="height:${Math.max(4,(d.cnt/maxBar)*100)}px"></div>
+      <div class="bar-day">${d.day}</div>
+    </div>`).join('');
+
+  // Heatmap
+  renderHeatmap(sessions);
+
+  // History
+  const hist = sessions.slice().reverse().slice(0,20);
+  document.getElementById('historyList').innerHTML = hist.length ? hist.map(s=>`
+    <div class="session-item">
+      <div>
+        <span style="font-size:13px">${s.task||'Focus Session'}</span>
+        <span class="badge badge-accent" style="margin-left:8px">${s.dur}min</span>
+      </div>
+      <span class="session-time">${s.date} ${new Date(s.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+    </div>`).join('') : '<div class="empty-state">No sessions yet</div>';
+}
+
+function renderHeatmap(sessions) {
+  const weeks = 12;
+  const days = weeks*7;
+  const end = new Date(); end.setHours(23,59,59,999);
+  const start = new Date(end); start.setDate(start.getDate()-days+1); start.setHours(0,0,0,0);
+  const counts = {};
+  sessions.forEach(s=>{ counts[s.date]=(counts[s.date]||0)+1; });
+  const maxC = Math.max(...Object.values(counts),1);
+  let html = '';
+  const cur = new Date(start);
+  while(cur<=end) {
+    const ds = cur.toISOString().slice(0,10);
+    const c = counts[ds]||0;
+    const lvl = c===0?0:c<maxC*0.25?1:c<maxC*0.5?2:c<maxC*0.75?3:4;
+    html += `<div class="hmap-day${lvl>0?' l'+lvl:''}" title="${ds}: ${c} sessions"></div>`;
+    cur.setDate(cur.getDate()+1);
+  }
+  document.getElementById('heatmap').innerHTML = html;
+}
+
+// ===================== LEADERBOARD =====================
+let lbTab = 'today';
+
+function setLbTab(tab, btn) {
+  lbTab = tab;
+  document.querySelectorAll('.lb-tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const today = todayStr();
+  const weekStart = getWeekStart();
+  const users = Object.keys(DB.users);
+  const friends = DB.friends[currentUser]||[];
+
+  let data = users.filter(u=>{
+    if(lbTab==='friends') return u===currentUser||friends.includes(u);
+    return true;
+  }).map(u=>{
+    const sessions = DB.sessions[u]||[];
+    let s;
+    if(lbTab==='today') s=sessions.filter(x=>x.date===today);
+    else if(lbTab==='week') s=sessions.filter(x=>x.date>=weekStart);
+    else s=sessions;
+    const pomos=s.length, mins=s.reduce((a,x)=>a+x.dur,0);
+    const streak=(DB.streaks[u]||{}).current||0;
+    return {u, name:DB.users[u].name, color:DB.users[u].color, pomos, mins, streak};
+  }).filter(x=>x.pomos>0||x.u===currentUser);
+
+  data.sort((a,b)=>b.pomos-a.pomos||b.mins-a.mins);
+
+  const el = document.getElementById('leaderboardList');
+  if(data.length===0) { el.innerHTML='<div class="empty-state"><div class="icon">🏆</div>No activity yet for this period.</div>'; return; }
+
+  el.innerHTML = data.map((d,i)=>{
+    const rankClass=i===0?'r1':i===1?'r2':i===2?'r3':'';
+    const rankIcon=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+    const isYou = d.u===currentUser;
+    return `<div class="lb-row${isYou?' lb-you':''}">
+      <div class="lb-rank ${rankClass}">${rankIcon}</div>
+      <div class="avatar" style="width:34px;height:34px;font-size:12px;flex-shrink:0;background:${d.color}33;color:${d.color}">${d.name.charAt(0).toUpperCase()}</div>
+      <div class="lb-name">${escHtml(d.name)}${isYou?'<small>You</small>':''}</div>
+      <div class="lb-streak">🔥${d.streak}</div>
+      <div class="lb-stat"><strong>${d.pomos}</strong><small>${d.mins>=60?Math.floor(d.mins/60)+'h '+d.mins%60+'m':d.mins+'m'}</small></div>
+    </div>`;
+  }).join('');
+  document.getElementById('lbLastUpdate').textContent = 'Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+// ===================== FRIENDS =====================
+function sendFriendReq() {
+  const inp = document.getElementById('friendUsernameInput');
+  const target = inp.value.trim().toLowerCase();
+  if(!target) return;
+  if(target===currentUser) { showNotif("You can't add yourself!", 'error'); return; }
+  if(!DB.users[target]) { showNotif('User not found', 'error'); return; }
+  if((DB.friends[currentUser]||[]).includes(target)) { showNotif('Already friends!', 'error'); return; }
+  if(!DB.friendRequests[target]) DB.friendRequests[target]=[];
+  if(DB.friendRequests[target].includes(currentUser)) { showNotif('Request already sent', 'error'); return; }
+  DB.friendRequests[target].push(currentUser);
+  saveDB(); inp.value='';
+  showNotif(`Friend request sent to @${target}!`, 'success');
+  renderFriends();
+}
+
+function acceptFriend(from) {
+  if(!DB.friends[currentUser]) DB.friends[currentUser]=[];
+  if(!DB.friends[from]) DB.friends[from]=[];
+  DB.friends[currentUser].push(from);
+  DB.friends[from].push(currentUser);
+  DB.friendRequests[currentUser] = (DB.friendRequests[currentUser]||[]).filter(r=>r!==from);
+  saveDB(); renderFriends(); showNotif('Friend added!','success');
+}
+
+function declineFriend(from) {
+  DB.friendRequests[currentUser] = (DB.friendRequests[currentUser]||[]).filter(r=>r!==from);
+  saveDB(); renderFriends();
+}
+
+function removeFriend(u) {
+  DB.friends[currentUser] = (DB.friends[currentUser]||[]).filter(f=>f!==u);
+  DB.friends[u] = (DB.friends[u]||[]).filter(f=>f!==currentUser);
+  saveDB(); renderFriends(); showNotif('Friend removed','success');
+}
+
+function renderFriends() {
+  const reqs = DB.friendRequests[currentUser]||[];
+  const badge = document.getElementById('friendReqBadge');
+  badge.style.display = reqs.length?'inline':'none';
+  
+  // Requests
+  const reqEl = document.getElementById('friendRequests');
+  reqEl.innerHTML = reqs.length ? `<div style="margin-bottom:16px"><div style="font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:600">FRIEND REQUESTS</div>`+
+    reqs.map(r=>`<div class="friend-req">
+      <div class="avatar" style="width:34px;height:34px;flex-shrink:0;font-size:13px;background:${DB.users[r]?.color||'#7c6ff7'}33;color:${DB.users[r]?.color||'#7c6ff7'}">${DB.users[r]?.name?.charAt(0)||'?'}</div>
+      <div><strong>${escHtml(DB.users[r]?.name||r)}</strong><div style="font-size:12px;color:var(--text2)">@${r}</div></div>
+      <div class="friend-req-btns">
+        <button class="btn btn-primary btn-sm" onclick="acceptFriend('${r}')">Accept</button>
+        <button class="btn btn-outline btn-sm" onclick="declineFriend('${r}')">Decline</button>
+      </div>
+    </div>`).join('')+'</div>' : '';
+
+  // Friends list
+  const friends = DB.friends[currentUser]||[];
+  const el = document.getElementById('friendsList');
+  if(!friends.length) { el.innerHTML='<div class="empty-state"><div class="icon">👥</div>No friends yet — add someone by username!</div>'; return; }
+  const today = todayStr();
+  el.innerHTML = friends.map(f=>{
+    const user = DB.users[f];
+    if(!user) return '';
+    const sessions = DB.sessions[f]||[];
+    const todayPomos = sessions.filter(s=>s.date===today).length;
+    const totalPomos = sessions.length;
+    const streak = (DB.streaks[f]||{}).current||0;
+    const lastSess = sessions[sessions.length-1];
+    const isOnline = lastSess && (Date.now()-lastSess.ts)<3600000;
+    return `<div class="friend-card">
+      <div class="friend-status ${isOnline?'online':'offline'}"></div>
+      <div class="avatar" style="width:38px;height:38px;font-size:14px;flex-shrink:0;background:${user.color}33;color:${user.color}">${user.name.charAt(0).toUpperCase()}</div>
+      <div class="friend-info">
+        <h4>${escHtml(user.name)} ${isOnline?'<span style="font-size:11px;color:var(--green)">● Active</span>':''}</h4>
+        <p>@${f} &nbsp;·&nbsp; 🔥 ${streak} day streak</p>
+      </div>
+      <div class="friend-stats">
+        <strong>${todayPomos} 🍅 today</strong>
+        <small>${totalPomos} total</small>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-left:12px" onclick="removeFriend('${f}')">Remove</button>
+    </div>`;
+  }).join('');
+}
+
+// ===================== SETTINGS =====================
+function loadSettings() {
+  const s = getSettings();
+  document.getElementById('focusDurVal').textContent = s.focusDur;
+  document.getElementById('shortDurVal').textContent = s.shortDur;
+  document.getElementById('longDurVal').textContent = s.longDur;
+  document.getElementById('pomoCountVal').textContent = s.pomoCount;
+  document.getElementById('dailyGoalVal').textContent = s.dailyGoal;
+  document.getElementById('toggleSound').className='toggle'+(s.sound?' on':'');
+  document.getElementById('toggleAutoBreak').className='toggle'+(s.autoBreak?' on':'');
+  document.getElementById('toggleAutoFocus').className='toggle'+(s.autoFocus?' on':'');
+  if(timerState.remaining===0||!timerState.running) {
+    timerState.remaining = s.focusDur*60;
+    timerState.total = timerState.remaining;
+    updateTimerDisplay();
+    updateRing(1);
+  }
+}
+
+function adjSetting(key, delta) {
+  const s = getSettings();
+  const mins = {focusDur:[1,90],shortDur:[1,30],longDur:[1,60],pomoCount:[1,10],dailyGoal:[1,20]};
+  const [mn,mx]=mins[key]||[1,100];
+  s[key]=Math.max(mn,Math.min(mx,s[key]+delta));
+  saveDB(); loadSettings();
+  if(!timerState.running && timerState.mode==='focus' && key==='focusDur') {
+    timerState.remaining=s.focusDur*60; timerState.total=timerState.remaining;
+    updateTimerDisplay(); updateRing(1);
+  }
+}
+
+function togglePref(key) {
+  const s = getSettings();
+  s[key]=!s[key];
+  saveDB(); loadSettings();
+}
+
+// ===================== NAVIGATION =====================
+function gotoPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page'+page.charAt(0).toUpperCase()+page.slice(1)).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(page==='stats') renderStats();
+  if(page==='leaderboard') renderLeaderboard();
+  if(page==='friends') renderFriends();
+  if(page==='settings') loadSettings();
+}
+
+// ===================== UTILS =====================
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function getWeekStart() { const d=new Date(); d.setDate(d.getDate()-d.getDay()); return d.toISOString().slice(0,10); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let notifTimeout;
+function showNotif(msg, type='success') {
+  const el=document.getElementById('notif');
+  el.textContent=msg; el.className='notif show '+(type||'');
+  clearTimeout(notifTimeout);
+  notifTimeout=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ===================== BOOTSTRAP =====================
+loadDB();
+
+// Add demo users if fresh DB
+if(Object.keys(DB.users).length===0) {
+  const demos=[
+    {u:'alex_f',name:'Alex Foster',pass:'demo123',color:'#4ecca3'},
+    {u:'sara_k',name:'Sara Kim',pass:'demo123',color:'#f5a623'},
+    {u:'mike_r',name:'Mike Ross',pass:'demo123',color:'#e879a0'},
+    {u:'priya_m',name:'Priya Mehta',pass:'demo123',color:'#60a0f0'},
+  ];
+  const today=todayStr();
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1); const yd=yesterday.toISOString().slice(0,10);
+  const day2=new Date(); day2.setDate(day2.getDate()-2); const d2=day2.toISOString().slice(0,10);
+  demos.forEach((d,i)=>{
+    DB.users[d.u]={name:d.name,pass:hashPass(d.pass),created:Date.now(),color:d.color};
+    const cnt=[7,5,9,4][i];
+    const cntY=[5,8,3,6][i];
+    const sessions=[];
+    for(let j=0;j<cnt;j++) sessions.push({date:today,ts:Date.now()-j*1500000,dur:25,task:'Deep Work'});
+    for(let j=0;j<cntY;j++) sessions.push({date:yd,ts:Date.now()-86400000-j*1500000,dur:25,task:'Study'});
+    for(let j=0;j<[3,4,6,2][i];j++) sessions.push({date:d2,ts:Date.now()-172800000-j*1500000,dur:25,task:'Project'});
+    DB.sessions[d.u]=sessions;
+    DB.tasks[d.u]=[];
+    DB.friends[d.u]=[];
+    DB.friendRequests[d.u]=[];
+    DB.settings[d.u]=defaultSettings();
+    DB.streaks[d.u]={current:[5,3,12,2][i],longest:[15,8,12,6][i],lastDate:today};
+  });
+  // Friend each other
+  DB.friends['alex_f']=['sara_k','mike_r'];
+  DB.friends['sara_k']=['alex_f'];
+  DB.friends['mike_r']=['alex_f'];
+  saveDB();
+}
+
+// Auto-start timer display
+timerState.remaining = 25*60;
+timerState.total = 25*60;
+updateTimerDisplay();
+updateRing(1);
+</script>
+</body>
+</html>
